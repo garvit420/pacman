@@ -2,6 +2,9 @@ import { CellType, Direction, GameState, Ghost, Position, GameConfig } from '../
 import { getNextGhostMove } from '../ai/GhostAI';
 import { saveBestScore } from '../../utils/helpers';
 
+// Ghost movement speed in milliseconds
+export const GHOST_MOVE_INTERVAL = 690; // 0.69 seconds
+
 // Initial maze layout
 export const initialMaze: CellType[][] = [
   ['#', '#', '#', '#', '#', '#', '#', '#', '#', '#'],
@@ -66,7 +69,14 @@ export const generateGhosts = (maze: CellType[][], count: number): Ghost[] => {
   for (let i = 0; i < ghostCount; i++) {
     const randomIndex = Math.floor(Math.random() * pelletPositions.length);
     const position = pelletPositions.splice(randomIndex, 1)[0];
-    ghosts.push({ position });
+    
+    // Assign a random ghost image (1, 2, or 3)
+    const imageId = Math.floor(Math.random() * 3) + 1;
+    
+    ghosts.push({ 
+      position,
+      imageId 
+    });
   }
   
   return ghosts;
@@ -210,7 +220,7 @@ export const movePacman = (gameState: GameState, direction: Direction): GameStat
   
   // Move ghosts after Pac-Man's move if it's time
   const currentTime = Date.now();
-  if (currentTime - gameState.lastGhostMove >= 1000) {
+  if (currentTime - gameState.lastGhostMove >= GHOST_MOVE_INTERVAL) {
     return {
       ...moveGhosts(newGameState),
       lastGhostMove: currentTime
@@ -235,7 +245,10 @@ export const moveGhosts = (gameState: GameState): GameState => {
   // Move each ghost using BFS
   const newGhosts = ghosts.map(ghost => {
     const newPosition = getNextGhostMove(tempMaze, ghost.position, pacman);
-    return { position: newPosition };
+    return { 
+      position: newPosition,
+      imageId: ghost.imageId // Preserve the ghost's imageId
+    };
   });
   
   // Update the maze with new ghost positions

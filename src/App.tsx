@@ -7,7 +7,7 @@ import GameOver from './components/GameOver';
 import StartScreen from './components/StartScreen';
 import ConfigDisplay from './components/ConfigDisplay';
 import { Direction, GameState } from './types';
-import { initializeGame, movePacman, moveGhosts } from './game/core/Game';
+import { initializeGame, movePacman, moveGhosts, GHOST_MOVE_INTERVAL } from './game/core/Game';
 import { saveBestScore } from './utils/helpers';
 
 function App() {
@@ -24,11 +24,11 @@ function App() {
         clearInterval(ghostTimerRef.current);
       }
       
-      // Set new timer for ghost movement (every 1 second)
+      // Set new timer for ghost movement using GHOST_MOVE_INTERVAL
       ghostTimerRef.current = window.setInterval(() => {
         setGameState(prevState => {
           const currentTime = Date.now();
-          if (currentTime - prevState.lastGhostMove >= 1000) {
+          if (currentTime - prevState.lastGhostMove >= GHOST_MOVE_INTERVAL) {
             const newState = moveGhosts(prevState);
             return {
               ...newState,
@@ -37,7 +37,7 @@ function App() {
           }
           return prevState;
         });
-      }, 1000);
+      }, GHOST_MOVE_INTERVAL);
     }
     
     // Clean up timer on unmount or game over
@@ -145,7 +145,11 @@ function App() {
               config={gameState.config}
             />
             
-            <GameBoard maze={gameState.maze} pacmanPosition={gameState.pacman} />
+            <GameBoard 
+              maze={gameState.maze} 
+              pacmanPosition={gameState.pacman} 
+              ghosts={gameState.ghosts}
+            />
             
             <Controls onMove={handleMove} />
             

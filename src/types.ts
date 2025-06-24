@@ -7,6 +7,7 @@ export interface Position {
 
 export interface Ghost {
   position: Position;
+  imageId: number; // 1, 2, or 3 for the different ghost images
 }
 
 export interface GameConfig {
