@@ -5,19 +5,184 @@ import { saveBestScore } from '../../utils/helpers';
 // Ghost movement speed in milliseconds
 export const GHOST_MOVE_INTERVAL = 690; // 0.69 seconds
 
-// Initial maze layout
-export const initialMaze: CellType[][] = [
-  ['#', '#', '#', '#', '#', '#', '#', '#', '#', '#'],
-  ['#', 'P', '.', '.', '.', '.', '.', '.', '.', '#'],
-  ['#', '.', '#', '#', '#', '.', '#', '#', '.', '#'],
-  ['#', '.', '.', '.', '.', '.', '.', '.', '.', '#'],
-  ['#', '#', '#', '.', '#', '#', '.', '#', '.', '#'],
-  ['#', '.', '.', '.', '.', '.', '.', '.', '.', '#'],
-  ['#', '.', '#', '#', '#', '.', '#', '#', '.', '#'],
-  ['#', '.', '.', '.', '.', '.', '.', '.', '.', '#'],
-  ['#', '.', '#', '#', '#', '.', '#', '#', 'E', '#'],
-  ['#', '#', '#', '#', '#', '#', '#', '#', '#', '#']
-];
+// Check if a position is within the bounds of the maze
+const isInBounds = (position: Position, rows: number, cols: number): boolean => {
+  return position.row >= 0 && position.row < rows && position.col >= 0 && position.col < cols;
+};
+
+// Generate a random maze with exactly 42 pellets
+export const generateMaze = (rows: number = 10, cols: number = 10): CellType[][] => {
+  // Create a maze with walls on the perimeter
+  const maze: CellType[][] = Array(rows)
+    .fill(null)
+    .map((_, rowIndex) => 
+      Array(cols)
+        .fill(null)
+        .map((_, colIndex) => {
+          if (rowIndex === 0 || rowIndex === rows - 1 || colIndex === 0 || colIndex === cols - 1) {
+            return '#'; // Wall on the perimeter
+          }
+          return ' '; // Empty space inside
+        })
+    );
+  
+  // Place Pacman at the top-left corner (inside the perimeter)
+  maze[1][1] = 'P';
+  
+  // Place exit at the bottom-right corner (inside the perimeter)
+  maze[rows - 2][cols - 2] = 'E';
+  
+  // Create a grid of walls with guaranteed paths
+  for (let row = 2; row < rows - 2; row += 2) {
+    for (let col = 2; col < cols - 2; col += 2) {
+      // Place a wall
+      maze[row][col] = '#';
+      
+      // Create a random path by removing one adjacent wall
+      // This ensures the maze is fully connected
+      const directions = [
+        { row: -1, col: 0 }, // up
+        { row: 0, col: 1 },  // right
+        { row: 1, col: 0 },  // down
+        { row: 0, col: -1 }, // left
+      ];
+      
+      // Shuffle directions
+      for (let i = directions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [directions[i], directions[j]] = [directions[j], directions[i]];
+      }
+      
+      // Try each direction until we find one that doesn't interfere with Pacman or Exit
+      for (const dir of directions) {
+        const wallRow = row + dir.row;
+        const wallCol = col + dir.col;
+        
+        // Skip if this would affect Pacman or Exit positions
+        if ((wallRow === 1 && wallCol === 1) || (wallRow === rows - 2 && wallCol === cols - 2)) {
+          continue;
+        }
+        
+        // Place a random wall or leave it open
+        if (Math.random() < 0.65) { // 65% chance of placing a wall
+          maze[wallRow][wallCol] = '#';
+        }
+      }
+    }
+  }
+  
+  // Add exactly 42 pellets
+  const availableSpaces: Position[] = [];
+  
+  for (let row = 1; row < rows - 1; row++) {
+    for (let col = 1; col < cols - 1; col++) {
+      if (maze[row][col] === ' ' && !(row === 1 && col === 1) && !(row === rows - 2 && col === cols - 2)) {
+        availableSpaces.push({ row, col });
+      }
+    }
+  }
+  
+  // Shuffle available spaces
+  for (let i = availableSpaces.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [availableSpaces[i], availableSpaces[j]] = [availableSpaces[j], availableSpaces[i]];
+  }
+  
+  // Place 42 pellets
+  const pelletCount = Math.min(42, availableSpaces.length);
+  for (let i = 0; i < pelletCount; i++) {
+    const position = availableSpaces[i];
+    maze[position.row][position.col] = '.';
+  }
+  
+  // Ensure all pellets are connected and reachable from Pacman
+  let attempts = 0;
+  while (!arePelletsConnected(maze) && attempts < 15) {
+    // If pellets aren't connected, remove some walls to create paths
+    const wallPositions: Position[] = [];
+    
+    // Find all walls that are not on the perimeter
+    for (let row = 1; row < rows - 1; row++) {
+      for (let col = 1; col < cols - 1; col++) {
+        if (maze[row][col] === '#') {
+          wallPositions.push({ row, col });
+        }
+      }
+    }
+    
+    // Remove some random walls
+    const wallsToRemove = Math.min(5, wallPositions.length);
+    for (let i = 0; i < wallsToRemove; i++) {
+      if (wallPositions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * wallPositions.length);
+        const wallPos = wallPositions.splice(randomIndex, 1)[0];
+        maze[wallPos.row][wallPos.col] = ' ';
+      }
+    }
+    
+    attempts++;
+  }
+  
+  // If we still don't have connectivity after multiple attempts,
+  // create a direct path from Pacman to the exit
+  if (!arePelletsConnected(maze)) {
+    // Create a simple path from Pacman to exit
+    const pacmanPos = { row: 1, col: 1 };
+    const exitPos = { row: rows - 2, col: cols - 2 };
+    
+    // Horizontal path first
+    for (let col = pacmanPos.col; col <= exitPos.col; col++) {
+      if (maze[pacmanPos.row][col] === '#') {
+        maze[pacmanPos.row][col] = ' ';
+      }
+    }
+    
+    // Then vertical path
+    for (let row = pacmanPos.row; row <= exitPos.row; row++) {
+      if (maze[row][exitPos.col] === '#') {
+        maze[row][exitPos.col] = ' ';
+      }
+    }
+  }
+  
+  // Make sure we have exactly 42 pellets
+  const currentPelletCount = countPellets(maze);
+  
+  if (currentPelletCount < 42) {
+    // Add more pellets if needed
+    const emptySpaces: Position[] = [];
+    for (let row = 1; row < rows - 1; row++) {
+      for (let col = 1; col < cols - 1; col++) {
+        if (maze[row][col] === ' ' && !(row === 1 && col === 1) && !(row === rows - 2 && col === cols - 2)) {
+          emptySpaces.push({ row, col });
+        }
+      }
+    }
+    
+    // Shuffle and add pellets
+    for (let i = emptySpaces.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [emptySpaces[i], emptySpaces[j]] = [emptySpaces[j], emptySpaces[i]];
+    }
+    
+    for (let i = 0; i < 42 - currentPelletCount && i < emptySpaces.length; i++) {
+      const pos = emptySpaces[i];
+      maze[pos.row][pos.col] = '.';
+    }
+  } else if (currentPelletCount > 42) {
+    // Remove excess pellets if needed
+    const pelletPositions = findPelletPositions(maze);
+    for (let i = 0; i < currentPelletCount - 42; i++) {
+      if (pelletPositions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * pelletPositions.length);
+        const pelletPos = pelletPositions.splice(randomIndex, 1)[0];
+        maze[pelletPos.row][pelletPos.col] = ' ';
+      }
+    }
+  }
+  
+  return maze;
+};
 
 // Count pellets in the maze
 export const countPellets = (maze: CellType[][]): number => {
@@ -57,6 +222,66 @@ export const findPelletPositions = (maze: CellType[][]): Position[] => {
   return positions;
 };
 
+// BFS to check if all pellets and the exit are reachable from Pacman
+const arePelletsConnected = (maze: CellType[][]): boolean => {
+  const rows = maze.length;
+  const cols = maze[0].length;
+  
+  // Find Pacman's position
+  const pacmanPos = findPacmanPosition(maze);
+  
+  // Find all pellet positions
+  const pelletPositions = findPelletPositions(maze);
+  
+  if (pelletPositions.length === 0) return true;
+  
+  // Start BFS from Pacman's position
+  const queue: Position[] = [pacmanPos];
+  const visited: boolean[][] = Array(rows)
+    .fill(null)
+    .map(() => Array(cols).fill(false));
+  
+  visited[pacmanPos.row][pacmanPos.col] = true;
+  let visitedPellets = 0;
+  let exitReached = false;
+  
+  const directions = [
+    { row: -1, col: 0 },
+    { row: 0, col: 1 },
+    { row: 1, col: 0 },
+    { row: 0, col: -1 },
+  ];
+  
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    
+    for (const dir of directions) {
+      const newRow = current.row + dir.row;
+      const newCol = current.col + dir.col;
+      
+      if (
+        isInBounds({ row: newRow, col: newCol }, rows, cols) &&
+        maze[newRow][newCol] !== '#' &&
+        !visited[newRow][newCol]
+      ) {
+        visited[newRow][newCol] = true;
+        queue.push({ row: newRow, col: newCol });
+        
+        if (maze[newRow][newCol] === '.') {
+          visitedPellets++;
+        }
+        
+        if (maze[newRow][newCol] === 'E') {
+          exitReached = true;
+        }
+      }
+    }
+  }
+  
+  // Check if all pellets were visited and the exit was reached
+  return visitedPellets === pelletPositions.length && exitReached;
+};
+
 // Generate random ghost positions
 export const generateGhosts = (maze: CellType[][], count: number): Ghost[] => {
   const pelletPositions = findPelletPositions(maze);
@@ -84,8 +309,8 @@ export const generateGhosts = (maze: CellType[][], count: number): Ghost[] => {
 
 // Initialize game state with configurable number of ghosts
 export const initializeGame = (numGhosts: number = 2): GameState => {
-  // Create a deep copy of the initial maze
-  const maze = JSON.parse(JSON.stringify(initialMaze));
+  // Generate a new random maze instead of using the hardcoded one
+  const maze = generateMaze(10, 10);
   
   // Find Pac-Man's position and remove 'P' from maze
   const pacman = findPacmanPosition(maze);
