@@ -2,9 +2,15 @@
 
 A modern implementation of the classic Pac-Man game built with React, TypeScript, and Tailwind CSS. This version features dynamic maze generation and ghost AI powered by graph algorithms.
 
+LINK: https://pacman-chi-dusky.vercel.app/
+
 ## Game Overview
 
 In this turn-based version of Pac-Man, you navigate through randomly generated mazes, collect pellets, and try to reach the exit while avoiding ghosts. Each game features a unique maze layout, providing a fresh challenge every time you play.
+
+## Demo Video
+
+https://github.com/user-attachments/assets/9ec83f62-bca4-4c4b-b973-27e855240d22
 
 ## How to Play
 
@@ -50,95 +56,6 @@ The ghost AI uses Breadth-First Search (BFS) to find the shortest path to Pac-Ma
 
 The BFS algorithm is implemented in `src/game/ai/GhostAI.ts`:
 
-```typescript
-// BFS algorithm to find shortest path from ghost to pacman
-export const findShortestPath = (
-  maze: CellType[][],
-  start: Position,
-  target: Position
-): Position[] => {
-  const rows = maze.length;
-  const cols = maze[0].length;
-  
-  // Queue for BFS
-  const queue: QueueNode[] = [];
-  
-  // Visited cells to avoid cycles
-  const visited: boolean[][] = Array(rows)
-    .fill(null)
-    .map(() => Array(cols).fill(false));
-  
-  // Add starting position to queue
-  queue.push({ position: start, path: [start] });
-  visited[start.row][start.col] = true;
-  
-  // BFS loop
-  while (queue.length > 0) {
-    const { position, path } = queue.shift()!;
-    
-    // Check if we reached the target
-    if (position.row === target.row && position.col === target.col) {
-      return path;
-    }
-    
-    // Try all four directions
-    for (const dir of directions) {
-      const newRow = position.row + dir.row;
-      const newCol = position.col + dir.col;
-      
-      // Check if the new position is valid
-      if (
-        newRow >= 0 && 
-        newRow < rows && 
-        newCol >= 0 && 
-        newCol < cols && 
-        maze[newRow][newCol] !== '#' && 
-        !visited[newRow][newCol]
-      ) {
-        const newPosition = { row: newRow, col: newCol };
-        const newPath = [...path, newPosition];
-        
-        queue.push({ position: newPosition, path: newPath });
-        visited[newRow][newCol] = true;
-      }
-    }
-  }
-  
-  // No path found
-  return [];
-};
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v14 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/pacman-graph-project.git
-cd pacman-graph-project
-```
-
-2. Install dependencies
-```bash
-npm install
-# or
-yarn install
-```
-
-3. Start the development server
-```bash
-npm start
-# or
-yarn start
-```
-
-4. Open [http://localhost:3000](http://localhost:3000) to play the game
 
 ## Technologies Used
 
@@ -146,10 +63,6 @@ yarn start
 - TypeScript
 - Tailwind CSS
 - HTML5 / CSS3
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
