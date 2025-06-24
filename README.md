@@ -1,46 +1,157 @@
-# Getting Started with Create React App
+# Pac-Man Graph Project
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern implementation of the classic Pac-Man game built with React, TypeScript, and Tailwind CSS. This version features dynamic maze generation and ghost AI powered by graph algorithms.
 
-## Available Scripts
+## Game Overview
 
-In the project directory, you can run:
+In this turn-based version of Pac-Man, you navigate through randomly generated mazes, collect pellets, and try to reach the exit while avoiding ghosts. Each game features a unique maze layout, providing a fresh challenge every time you play.
 
-### `npm start`
+## How to Play
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+1. **Start the Game**: Choose the number of ghosts (1-5) from the start screen
+2. **Controls**: Use WASD keys or the on-screen buttons to move Pac-Man
+3. **Goal**: Collect pellets and reach the exit (marked with 'E')
+4. **Avoid Ghosts**: If a ghost catches you, it's game over!
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Features
 
-### `npm test`
+- **Dynamic Maze Generation**: Every game generates a new, unique 10x10 maze
+- **Configurable Difficulty**: Choose between 1-5 ghosts
+- **Intelligent Ghost AI**: Ghosts use BFS pathfinding to hunt you down
+- **Score Tracking**: Earn points for collecting pellets and reaching the exit
+- **Best Score**: The game tracks your best score for each ghost configuration
+- **Turn-Based Gameplay**: Ghosts move after you do, with a 0.69-second delay
+- **Responsive Design**: Built with Tailwind CSS for a clean, modern interface
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Game Mechanics
 
-### `npm run build`
+- **Pellets**: Each maze contains exactly 42 pellets worth 10 points each
+- **Exit**: Reach the exit to win and earn 100 bonus points
+- **Ghosts**: Ghosts will destroy pellets as they move through the maze
+- **Connectivity**: All pellets and the exit are guaranteed to be reachable
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Technical Implementation
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Graph Algorithm: Breadth-First Search (BFS)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The ghost AI uses Breadth-First Search (BFS) to find the shortest path to Pac-Man. BFS was chosen for several key reasons:
 
-### `npm run eject`
+1. **Guaranteed Shortest Path**: BFS always finds the shortest path in an unweighted graph, making the ghosts as efficient as possible in hunting down Pac-Man.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+2. **Complete Solution**: BFS will always find a path if one exists, ensuring ghosts can navigate any valid maze configuration.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. **Time Complexity**: With a time complexity of O(V + E) where V is the number of vertices (cells) and E is the number of edges (connections between cells), BFS is efficient for our grid-based maze.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+4. **Space Efficiency**: While BFS requires more memory than depth-first search (DFS), our 10x10 maze is small enough that this isn't a concern.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+5. **Predictable Behavior**: Unlike randomized algorithms, BFS creates predictable ghost movement patterns that players can learn and strategize against.
 
-## Learn More
+### Implementation Details
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+The BFS algorithm is implemented in `src/game/ai/GhostAI.ts`:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```typescript
+// BFS algorithm to find shortest path from ghost to pacman
+export const findShortestPath = (
+  maze: CellType[][],
+  start: Position,
+  target: Position
+): Position[] => {
+  const rows = maze.length;
+  const cols = maze[0].length;
+  
+  // Queue for BFS
+  const queue: QueueNode[] = [];
+  
+  // Visited cells to avoid cycles
+  const visited: boolean[][] = Array(rows)
+    .fill(null)
+    .map(() => Array(cols).fill(false));
+  
+  // Add starting position to queue
+  queue.push({ position: start, path: [start] });
+  visited[start.row][start.col] = true;
+  
+  // BFS loop
+  while (queue.length > 0) {
+    const { position, path } = queue.shift()!;
+    
+    // Check if we reached the target
+    if (position.row === target.row && position.col === target.col) {
+      return path;
+    }
+    
+    // Try all four directions
+    for (const dir of directions) {
+      const newRow = position.row + dir.row;
+      const newCol = position.col + dir.col;
+      
+      // Check if the new position is valid
+      if (
+        newRow >= 0 && 
+        newRow < rows && 
+        newCol >= 0 && 
+        newCol < cols && 
+        maze[newRow][newCol] !== '#' && 
+        !visited[newRow][newCol]
+      ) {
+        const newPosition = { row: newRow, col: newCol };
+        const newPath = [...path, newPosition];
+        
+        queue.push({ position: newPosition, path: newPath });
+        visited[newRow][newCol] = true;
+      }
+    }
+  }
+  
+  // No path found
+  return [];
+};
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/pacman-graph-project.git
+cd pacman-graph-project
+```
+
+2. Install dependencies
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Start the development server
+```bash
+npm start
+# or
+yarn start
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) to play the game
+
+## Technologies Used
+
+- React
+- TypeScript
+- Tailwind CSS
+- HTML5 / CSS3
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Inspired by the classic Pac-Man arcade game
+- Built as a demonstration of graph algorithms in game development
