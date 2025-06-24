@@ -130,14 +130,8 @@ function App() {
         <StartScreen onStart={handleStart} defaultGhosts={2} />
       ) : (
         <>
-          <div className="w-full max-w-md flex justify-between items-center mb-4">
+          <div className="w-full max-w-md flex justify-center items-center mb-2">
             <h1 className="text-3xl font-bold">Pac-Man</h1>
-            <button 
-              onClick={handleBack}
-              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded"
-            >
-              Back
-            </button>
           </div>
           
           <ConfigDisplay config={gameState.config} />
@@ -169,6 +163,13 @@ function App() {
             <p>Use WASD keys or the buttons to move Pac-Man</p>
             <p>Collect all pellets and reach the exit to win!</p>
           </div>
+          
+          <button 
+            onClick={handleBack}
+            className="mt-4 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded"
+          >
+            Back to Menu
+          </button>
         </>
       )}
     </div>
